@@ -1,7 +1,8 @@
 import os
+
 import discord
-from discord.ext import commands
 from discord import ui
+from discord.ext import commands
 from discord.utils import get
 from pytube import YouTube
 
@@ -13,8 +14,7 @@ intents.reactions = True
 
 bot = commands.Bot(command_prefix='<', intents=intents)
 
-ffmpeg_executable = './ffmpeg.exe'
-print(ffmpeg_executable)
+ffmpeg_executable = 'ffmpeg'
 
 class RoleButton(ui.Button):
     def __init__(self, role):
@@ -102,12 +102,14 @@ async def play(ctx, url):
         await ctx.send(f"Now playing: {yt.title}")
 
         filename = f"{yt.title}.mp3"
-        stream.download(output_path="audio", filename=filename)
+        if stream is not None:
+            stream.download(output_path="audio", filename=filename)
+        source = discord.FFmpegPCMAudio(executable= ffmpeg_executable, source=f"audio/{filename}")
 
-        source = discord.FFmpegPCMAudio(f"audio/{filename}")
+        
         ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
     except Exception as e:
-        await ctx.send(f"Error playing the video: {e}")
+        await ctx.send(f"Failed: {e}")
 
 
 @bot.command(name='stop')
