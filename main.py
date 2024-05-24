@@ -1,6 +1,7 @@
 import os
 
 import discord
+import openai
 from discord import ui
 from discord.ext import commands
 from discord.utils import get
@@ -11,6 +12,8 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 intents.reactions = True
+
+openai.api_key = os.environ['OPENAI_KEY']
 
 bot = commands.Bot(command_prefix='<', intents=intents)
 
@@ -140,6 +143,18 @@ async def kick_error(ctx, error):
         await ctx.send('You do not have permission to kick members.')
     else:
         await ctx.send('An error occurred while kicking the member.')
+
+@bot.command(name='ask')
+async def ask(ctx, *, question):
+    try:
+        response = openai.Completion.create(
+            model="gpt-3.5-turbo-0125",
+            prompt=question,
+            max_tokens=40000
+        )
+        await ctx.send(response.choices[0].text.strip())
+    except Exception as e:
+        await ctx.send(f"Failed to get response from OpenAI: {e}")
 
 token = os.getenv('DISCORD_TOKEN')
 if not token:
