@@ -144,17 +144,17 @@ async def kick_error(ctx, error):
     else:
         await ctx.send('An error occurred while kicking the member.')
 
-@bot.command(name='ask')
-async def ask(ctx, *, question):
-    try:
-        response = openai.Completion.create(
-            model="gpt-3.5-turbo-0125",
-            prompt=question,
-            max_tokens=40000
-        )
-        await ctx.send(response.choices[0].text.strip())
-    except Exception as e:
-        await ctx.send(f"Failed to get response from OpenAI: {e}")
+#@bot.command(name='ask')
+#async def ask(ctx, *, question):
+#    try:
+#        response = openai.Completion.create(
+#            model="gpt-3.5-turbo-0125",
+#            prompt=question,
+#            max_tokens=40000
+#        )
+#        await ctx.send(response.choices[0].text.strip())
+#    except Exception as e:
+#        await ctx.send(f"Failed to get response from OpenAI: {e}")
 
 token = os.getenv('DISCORD_TOKEN')
 if not token:
