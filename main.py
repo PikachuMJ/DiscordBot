@@ -1,9 +1,9 @@
 import os
-
 import discord
-from discord import ui
 from discord.ext import commands
+from discord import ui
 from discord.utils import get
+from pytube import YouTube
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -12,6 +12,9 @@ intents.members = True
 intents.reactions = True
 
 bot = commands.Bot(command_prefix='<', intents=intents)
+
+ffmpeg_executable = './ffmpeg.exe'
+print(ffmpeg_executable)
 
 class RoleButton(ui.Button):
     def __init__(self, role):
@@ -58,46 +61,84 @@ class RoleView(ui.View):
 async def on_raw_reaction_add(payload):
     channel_id = payload.channel_id
     if channel_id == 926500132130791462:
-      guild = bot.get_guild(payload.guild_id)
-      if guild is not None:
-          member = guild.get_member(payload.user_id)
-          if member is not None:
-              role = get(guild.roles, name="KeinOG-Member")
+        guild = bot.get_guild(payload.guild_id)
+        if guild is not None:
+            member = guild.get_member(payload.user_id)
+            if member is not None:
+                role = get(guild.roles, name="KeinOG-Member")
 
-              if role is None:
-                  print("Role 'KeinOG-Member' not found.")
-                  return
-              await member.add_roles(role)
-              print(f"Added role 'KeinOG-Member' to {member.display_name}.")
-          else:
-              print("Member not found in the guild.")
-      else:
-          print("Guild not found.")
-          
+                if role is None:
+                    print("Role 'KeinOG-Member' not found.")
+                    return
+                await member.add_roles(role)
+                print(f"Added role 'KeinOG-Member' to {member.display_name}.")
+            else:
+                print("Member not found in the guild.")
+        else:
+            print("Guild not found.")
+
+@bot.command(name='join')
+async def join(ctx):
+    if ctx.author.voice is None:
+        await ctx.send("You are not connected to a voice channel.")
+        return
+    channel = ctx.author.voice.channel
+    await channel.connect()
+
+@bot.command(name='leave')
+async def leave(ctx):
+    if ctx.voice_client is not None:
+        await ctx.voice_client.disconnect()
+
+@bot.command(name='play')
+async def play(ctx, url):
+    if ctx.voice_client is None:
+        await ctx.send("I am not connected to a voice channel.")
+        return
+
+    try:
+        yt = YouTube(url)
+        stream = yt.streams.filter(only_audio=True).first()
+        await ctx.send(f"Now playing: {yt.title}")
+
+        filename = f"{yt.title}.mp3"
+        stream.download(output_path="audio", filename=filename)
+
+        source = discord.FFmpegPCMAudio(f"audio/{filename}")
+        ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+    except Exception as e:
+        await ctx.send(f"Error playing the video: {e}")
+
+
+@bot.command(name='stop')
+async def stop(ctx):
+    if ctx.voice_client is not None:
+        ctx.voice_client.stop()
+        await ctx.send("Playback stopped.")
+
 @bot.command(name='kick')
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
-  if reason is None:
-    reason = "No reason provided."
-  try:
-    await member.kick(reason=reason)
-    await ctx.send(f'User {member.mention} has been kicked for: {reason}')
-  except discord.Forbidden:
-    await ctx.send(f'I do not have permission to kick {member.mention}')
-  except discord.HTTPException:
-    await ctx.send('Kicking failed')
-    
+    if reason is None:
+        reason = "No reason provided."
+    try:
+        await member.kick(reason=reason)
+        await ctx.send(f'User {member.mention} has been kicked for: {reason}')
+    except discord.Forbidden:
+        await ctx.send(f'I do not have permission to kick {member.mention}')
+    except discord.HTTPException:
+        await ctx.send('Kicking failed')
+
 async def kick_error(ctx, error):
-  
-  if isinstance(error, commands.MissingRequiredArgument):
-    await ctx.send('Please mention the member to kick.')
-  elif isinstance(error, commands.MemberNotFound):
-    await ctx.send('Member not found.')
-  elif isinstance(error, commands.MissingPermissions):
-    await ctx.send('You do not have permission to kick members.')
-  else:
-    await ctx.send('An error occurred while kicking the member.')
-    
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send('Please mention the member to kick.')
+    elif isinstance(error, commands.MemberNotFound):
+        await ctx.send('Member not found.')
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send('You do not have permission to kick members.')
+    else:
+        await ctx.send('An error occurred while kicking the member.')
+
 token = os.getenv('DISCORD_TOKEN')
 if not token:
     raise ValueError("No DISCORD_TOKEN environment variable found")
