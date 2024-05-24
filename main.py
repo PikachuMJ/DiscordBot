@@ -96,20 +96,20 @@ async def play(ctx, url):
         await ctx.send("I am not connected to a voice channel.")
         return
 
-    #try:
-    yt = YouTube(url)
-    stream = yt.streams.filter(only_audio=True).first()
-    await ctx.send(f"Now playing: {yt.title}")
+    try:
+        yt = YouTube(url)
+        stream = yt.streams.filter(only_audio=True).first()
+        await ctx.send(f"Now playing: {yt.title}")
 
-    filename = f"{yt.title}.mp3"
-    if stream is not None:
-        stream.download(output_path="audio", filename=filename)
-    source = discord.FFmpegPCMAudio(executable= ffmpeg_executable, source=f"audio/{filename}")
+        filename = f"{yt.title}.mp3"
+        if stream is not None:
+            stream.download(output_path="audio", filename=filename)
+        source = discord.FFmpegPCMAudio(executable= ffmpeg_executable, source=f"audio/{filename}")
 
         
-    ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
-    #except Exception as e:
-    #await ctx.send(f"Failed: {e}")
+        ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+    except Exception as e:
+        await ctx.send(f"Process Failed: {e}")
 
 
 @bot.command(name='stop')
