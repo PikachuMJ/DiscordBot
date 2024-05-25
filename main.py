@@ -18,7 +18,6 @@ bot = commands.Bot(command_prefix='<', intents=intents)
 ffmpeg_executable = 'ffmpeg'
 audio_output_dir = 'spotAudio'
 
-# Spotify credentials
 SPOTIPY_CLIENT_ID = os.environ['SPOTIFY_CLIENT_ID']
 SPOTIPY_CLIENT_SECRET = os.environ['SPOTIFY_CLIENT_SECRET']
 
