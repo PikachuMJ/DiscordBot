@@ -105,7 +105,7 @@ async def kick_error(ctx, error):
     else:
         await ctx.send('An error occurred while kicking the member.')
 
-@bot.command(name='role', help='Adds a role to a member.')
+@bot.command(name='g_role', help='Adds a role to a member.')
 @commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, role_name: str):
     guild = ctx.guild
@@ -123,9 +123,9 @@ async def role(ctx, member: discord.Member, role_name: str):
     except discord.HTTPException as e:
         await ctx.send(f"Error occurred while assigning the role: {e}")
 
-@bot.command(name='remRole', help='Removes a role from a member.')
+@bot.command(name='r_role', help='Removes a role from a member.')
 @commands.has_permissions(manage_roles=True)
-async def remRole(ctx, member: discord.Member, role_name: str):
+async def remove_role(ctx, member: discord.Member, role_name: str):
     guild = ctx.guild
     role = get(guild.roles, name=role_name)
 
