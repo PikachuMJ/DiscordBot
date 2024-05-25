@@ -102,7 +102,6 @@ async def play(ctx, url):
                     track_artists = ', '.join(artist['name'] for artist in track['artists'])
 
                     search_query = f"{track_name} {track_artists}"
-                    await ctx.send(f"Searching on YouTube: {search_query}")
 
                     yt_search = Search(search_query)
                     if yt_search.results:
