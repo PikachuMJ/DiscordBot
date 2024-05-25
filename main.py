@@ -1,10 +1,10 @@
 import os
+
 import discord
+import spotipy
 from discord.ext import commands
 from discord.utils import get
-from pytube import YouTube
-from pytube import Search
-import spotipy
+from pytube import Search, YouTube
 from spotipy.oauth2 import SpotifyClientCredentials
 
 intents = discord.Intents.default()
