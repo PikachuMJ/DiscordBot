@@ -2,7 +2,6 @@ import os
 
 import discord
 import openai
-from discord import ui
 from discord.ext import commands
 from discord.utils import get
 from pytube import YouTube
@@ -19,47 +18,6 @@ bot = commands.Bot(command_prefix='<', intents=intents)
 
 ffmpeg_executable = 'ffmpeg'
 
-class RoleButton(ui.Button):
-    def __init__(self, role):
-        super().__init__(label="Get KeinOG-Member Role", style=discord.ButtonStyle.primary)
-        self.role = role
-
-    async def callback(self, interaction: discord.Interaction):
-        guild = interaction.guild
-        member = interaction.user
-
-        if guild is None:
-            await interaction.response.send_message("Guild is None", ephemeral=True)
-            return
-
-        if member is None:
-            await interaction.response.send_message("Member is None", ephemeral=True)
-            return
-
-        role = discord.utils.get(guild.roles, name=self.role)
-
-        if role is None:
-            await interaction.response.send_message(f"Role '{self.role}' not found or you don't have permission to assign this role.", ephemeral=True)
-            return
-
-        if not isinstance(member, discord.Member):
-            await interaction.response.send_message("Cannot add role to a non-Member user", ephemeral=True)
-            return
-
-        try:
-            await member.add_roles(role)
-            await interaction.response.send_message(f"Role {role.name} has been added to you!", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.response.send_message("I don't have permission to assign that role.", ephemeral=True)
-        except discord.HTTPException:
-            await interaction.response.send_message("Error occurred while assigning the role.", ephemeral=True)
-
-class RoleView(ui.View):
-    def __init__(self, role):
-        super().__init__()
-        self.add_item(RoleButton(role))
-
-
 @bot.event
 async def on_raw_reaction_add(payload):
     channel_id = payload.channel_id
@@ -73,14 +31,19 @@ async def on_raw_reaction_add(payload):
                 if role is None:
                     print("Role 'KeinOG-Member' not found.")
                     return
-                await member.add_roles(role)
-                print(f"Added role 'KeinOG-Member' to {member.display_name}.")
+                try:
+                    await member.add_roles(role)
+                    print(f"Added role 'KeinOG-Member' to {member.display_name}.")
+                except discord.Forbidden:
+                    print("I don't have permission to assign that role.")
+                except discord.HTTPException as e:
+                    print(f"Error occurred while assigning the role: {e}")
             else:
                 print("Member not found in the guild.")
         else:
             print("Guild not found.")
 
-@bot.command(name='join')
+@bot.command(name='join', help='Joins the voice channel you are currently in.')
 async def join(ctx):
     if ctx.author.voice is None:
         await ctx.send("You are not connected to a voice channel.")
@@ -88,12 +51,12 @@ async def join(ctx):
     channel = ctx.author.voice.channel
     await channel.connect()
 
-@bot.command(name='leave')
+@bot.command(name='leave', help='Leaves the current voice channel.')
 async def leave(ctx):
     if ctx.voice_client is not None:
         await ctx.voice_client.disconnect()
 
-@bot.command(name='play')
+@bot.command(name='play', help='Plays audio from a YouTube URL.')
 async def play(ctx, url):
     if ctx.voice_client is None:
         await ctx.send("I am not connected to a voice channel.")
@@ -107,21 +70,19 @@ async def play(ctx, url):
         filename = f"{yt.title}.mp3"
         if stream is not None:
             stream.download(output_path="audio", filename=filename)
-        source = discord.FFmpegPCMAudio(executable= ffmpeg_executable, source=f"audio/{filename}")
+        source = discord.FFmpegPCMAudio(executable=ffmpeg_executable, source=f"audio/{filename}")
 
-        
         ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
     except Exception as e:
         await ctx.send(f"Process Failed: {e}")
 
-
-@bot.command(name='stop')
+@bot.command(name='stop', help='Stops the current audio playback.')
 async def stop(ctx):
     if ctx.voice_client is not None:
         ctx.voice_client.stop()
         await ctx.send("Playback stopped.")
 
-@bot.command(name='kick')
+@bot.command(name='kick', help='Kicks a member from the server.')
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
     if reason is None:
@@ -144,17 +105,41 @@ async def kick_error(ctx, error):
     else:
         await ctx.send('An error occurred while kicking the member.')
 
-#@bot.command(name='ask')
-#async def ask(ctx, *, question):
-#    try:
-#        response = openai.Completion.create(
-#            model="gpt-3.5-turbo-0125",
-#            prompt=question,
-#            max_tokens=40000
-#        )
-#        await ctx.send(response.choices[0].text.strip())
-#    except Exception as e:
-#        await ctx.send(f"Failed to get response from OpenAI: {e}")
+@bot.command(name='role', help='Adds a role to a member.')
+@commands.has_permissions(manage_roles=True)
+async def role(ctx, member: discord.Member, role_name: str):
+    guild = ctx.guild
+    role = get(guild.roles, name=role_name)
+
+    if role is None:
+        await ctx.send(f"Role '{role_name}' not found.")
+        return
+
+    try:
+        await member.add_roles(role)
+        await ctx.send(f"Role '{role.name}' has been added to {member.mention}!")
+    except discord.Forbidden:
+        await ctx.send("I don't have permission to assign that role.")
+    except discord.HTTPException as e:
+        await ctx.send(f"Error occurred while assigning the role: {e}")
+
+@bot.command(name='remRole', help='Removes a role from a member.')
+@commands.has_permissions(manage_roles=True)
+async def remRole(ctx, member: discord.Member, role_name: str):
+    guild = ctx.guild
+    role = get(guild.roles, name=role_name)
+
+    if role is None:
+        await ctx.send(f"Role '{role_name}' not found.")
+        return
+
+    try:
+        await member.remove_roles(role)
+        await ctx.send(f"Role '{role.name}' has been removed from {member.mention}!")
+    except discord.Forbidden:
+        await ctx.send("I don't have permission to remove that role.")
+    except discord.HTTPException as e:
+        await ctx.send(f"Error occurred while removing the role: {e}")
 
 token = os.getenv('DISCORD_TOKEN')
 if not token:
