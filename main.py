@@ -91,7 +91,6 @@ async def play(ctx, url):
             await ctx.send(f"Process Failed: {e}")
     elif 'spotify.com' in url:
                 try:
-                    await ctx.send("Fetching track details from Spotify...")
                     track_id = url.split('/')[-1].split('?')[0]
                     track = sp.track(track_id)
                     if track is None:
