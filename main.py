@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import discord
@@ -17,6 +18,7 @@ bot = commands.Bot(command_prefix='<', intents=intents)
 
 ffmpeg_executable = 'ffmpeg'
 audio_output_dir = 'spotAudio'
+goofy_audios_dir = 'goofyAudios'
 
 SPOTIPY_CLIENT_ID = os.environ['SPOTIFY_CLIENT_ID']
 SPOTIPY_CLIENT_SECRET = os.environ['SPOTIFY_CLIENT_SECRET']
@@ -242,6 +244,72 @@ async def _remove_role(ctx, member: discord.Member, role_name: str):
         await ctx.send("I don't have permission to remove that role.")
     except discord.HTTPException as e:
         await ctx.send(f"Error occurred while removing the role: {e}")
+
+@bot.command(name='aud1', help='Joins the voice channel, plays a calvin car sound for 9 seconds')
+async def _aud1(ctx):
+    if ctx.author.voice is None:
+        await ctx.send("You are not connected to a voice channel.")
+        return
+
+    channel = ctx.author.voice.channel
+    voice_client = await channel.connect()
+
+    try:
+        song_file = os.path.join(goofy_audios_dir, 'calvinPCwuwuwu.mp3')
+
+        if not os.path.isfile(song_file):
+            await ctx.send("The song file 'calvinPCwuwuwu.mp3' was not found in the spotAudio directory.")
+            await voice_client.disconnect()
+            return
+
+        source = discord.FFmpegPCMAudio(executable=ffmpeg_executable, source=song_file)
+
+        voice_client.play(source)
+
+        await ctx.send(f"Playing 'calvinPCwuwuwu' for 2 seconds.")
+
+        await asyncio.sleep(9)
+
+        voice_client.stop()
+        await ctx.send("Leaving the voice channel.")
+        await voice_client.disconnect()
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+        if voice_client.is_connected():
+            await voice_client.disconnect()
+            
+@bot.command(name='aud2', help='Joins the voice channel, plays a calvin car sound for 2 seconds')
+async def _aud2(ctx):
+    if ctx.author.voice is None:
+        await ctx.send("You are not connected to a voice channel.")
+        return
+
+    channel = ctx.author.voice.channel
+    voice_client = await channel.connect()
+
+    try:
+        song_file = os.path.join(goofy_audios_dir, 'calvinsound2seconds.mp3')
+
+        if not os.path.isfile(song_file):
+            await ctx.send("The song file 'calvinsound2seconds.mp3' was not found in the spotAudio directory.")
+            await voice_client.disconnect()
+            return
+
+        source = discord.FFmpegPCMAudio(executable=ffmpeg_executable, source=song_file)
+
+        voice_client.play(source)
+
+        await ctx.send(f"Playing 'calvinsound2seconds' for 2 seconds.")
+
+        await asyncio.sleep(2)
+
+        voice_client.stop()
+        await ctx.send("Leaving the voice channel.")
+        await voice_client.disconnect()
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+        if voice_client.is_connected():
+            await voice_client.disconnect()
 
 token = os.getenv('DISCORD_TOKEN')
 if not token:
