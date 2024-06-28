@@ -266,7 +266,7 @@ async def _aud1(ctx):
 
         voice_client.play(source)
 
-        await ctx.send(f"Playing 'calvinPCwuwuwu' for 2 seconds.")
+        await ctx.send("Playing 'calvinPCwuwuwu' for 9 seconds.")
 
         await asyncio.sleep(9)
 
@@ -299,7 +299,7 @@ async def _aud2(ctx):
 
         voice_client.play(source)
 
-        await ctx.send(f"Playing 'calvinsound2seconds' for 2 seconds.")
+        await ctx.send("Playing 'calvinsound2seconds' for 2 seconds.")
 
         await asyncio.sleep(2)
 
