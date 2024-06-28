@@ -25,7 +25,6 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIPY_CLIENT_ID,
     client_secret=SPOTIPY_CLIENT_SECRET
 ))
-
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
@@ -53,9 +52,28 @@ async def on_raw_reaction_add(payload):
                 print("Member not found in the guild.")
         else:
             print("Guild not found.")
-
+@bot.event
+async def kick_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send('Please mention the member to kick.')
+    elif isinstance(error, commands.MemberNotFound):
+        await ctx.send('Member not found.')
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send('You do not have permission to kick members.')
+    else:
+        await ctx.send('An error occurred while kicking the member.')
+@bot.event
+async def ban_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send('Please mention the member to ban.')
+    elif isinstance(error, commands.MemberNotFound):
+        await ctx.send('Member not found.')
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send('You do not have permission to ban members.')
+    else:
+        await ctx.send('An error occurred while banning the member')
 @bot.command(name='join', help='Joins the voice channel you are currently in.')
-async def join(ctx):
+async def _join(ctx):
     if ctx.author.voice is None:
         await ctx.send("You are not connected to a voice channel.")
         return
@@ -63,12 +81,12 @@ async def join(ctx):
     await channel.connect()
 
 @bot.command(name='leave', help='Leaves the current voice channel.')
-async def leave(ctx):
+async def _leave(ctx):
     if ctx.voice_client is not None:
         await ctx.voice_client.disconnect()
 
 @bot.command(name='play', help='Plays audio from a YouTube or Spotify URL.')
-async def play(ctx, url):
+async def _play(ctx, url):
     if ctx.voice_client is None:
         await ctx.send("I am not connected to a voice channel.")
         return
@@ -130,14 +148,14 @@ async def play(ctx, url):
 
 
 @bot.command(name='stop', help='Stops the current audio playback.')
-async def stop(ctx):
+async def _stop(ctx):
     if ctx.voice_client is not None:
         ctx.voice_client.stop()
         await ctx.send("Playback stopped.")
 
 @bot.command(name='kick', help='Kicks a member from the server.')
 @commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member, *, reason=None):
+async def _kick(ctx, member: discord.Member, *, reason=None):
     if reason is None:
         reason = "No reason provided."
     try:
@@ -148,19 +166,50 @@ async def kick(ctx, member: discord.Member, *, reason=None):
     except discord.HTTPException:
         await ctx.send('Kicking failed')
 
-async def kick_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send('Please mention the member to kick.')
-    elif isinstance(error, commands.MemberNotFound):
-        await ctx.send('Member not found.')
-    elif isinstance(error, commands.MissingPermissions):
-        await ctx.send('You do not have permission to kick members.')
-    else:
-        await ctx.send('An error occurred while kicking the member.')
+@bot.command(name='ban', help='Bans a member from the server.')
+@commands.has_permissions(ban_members=True)
+async def _ban(ctx, member: discord.Member, *, reason=None):
+    if member is None:
+        await ctx.send("Please specify a member to ban.")
+        return
+    if member == ctx.message.author:
+        await ctx.send("You cannot ban yourself.")
+        return
+    if member == ctx.guild.owner:
+        await ctx.send(f"You cannot ban the server owner {member.mention}.")
+        return
+        
+    if reason is None:
+        reason = "No reason provided."
+    try:
+        await member.ban(reason=reason)
+        await ctx.send(f'User {member.mention} has been banned for: {reason}')
+    except discord.Forbidden:
+        await ctx.send(f'I do not have permission to ban {member.mention}')
+    except discord.HTTPException:
+        await ctx.send('Banning failed')
 
+@bot.command(name='unban', help='Unbans a member from the server.')
+@commands.has_permissions(ban_members=True)
+async def _unban(ctx, id: int):
+    if id is None:
+        await ctx.send("Please provide a valid user.")
+        return
+    try: 
+        user = await bot.fetch_user(id)
+        if user is None:
+            await ctx.send('User not found.')
+            return
+        await ctx.guild.unban(user)
+        await ctx.send(f"Successfully unbanned {user.name}#{user.discriminator}.")
+    except discord.Forbidden:
+        await ctx.send('I do not have permission to unban')
+    except discord.HTTPException:
+        await ctx.send('unbanning failed')
+        
 @bot.command(name='g_role', help='Adds a role to a member.')
 @commands.has_permissions(manage_roles=True)
-async def role(ctx, member: discord.Member, role_name: str):
+async def _role(ctx, member: discord.Member, role_name: str):
     guild = ctx.guild
     role = get(guild.roles, name=role_name)
 
@@ -178,7 +227,7 @@ async def role(ctx, member: discord.Member, role_name: str):
 
 @bot.command(name='r_role', help='Removes a role from a member.')
 @commands.has_permissions(manage_roles=True)
-async def remove_role(ctx, member: discord.Member, role_name: str):
+async def _remove_role(ctx, member: discord.Member, role_name: str):
     guild = ctx.guild
     role = get(guild.roles, name=role_name)
 
