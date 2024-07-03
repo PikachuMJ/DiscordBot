@@ -6,6 +6,7 @@ import spotipy
 from discord.ext import commands
 from discord.utils import get
 from pytube import Search, YouTube
+from replit import db
 from spotipy.oauth2 import SpotifyClientCredentials
 
 intents = discord.Intents.default()
@@ -27,6 +28,24 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIPY_CLIENT_ID,
     client_secret=SPOTIPY_CLIENT_SECRET
 ))
+
+class TicketButton(discord.ui.Button):
+    def __init__(self, ctx):
+        super().__init__(label='Create Ticket', style=discord.ButtonStyle.success)
+        self.ctx = ctx
+
+    async def callback(self, interaction):
+        await interaction.response.defer()
+        db['ticket'] += 1
+        await create_ticket(self.ctx, interaction)
+        
+@bot.command(name='ticket', help='Creates a button to create a ticket.')
+async def _ticket(ctx):
+    button = discord.ui.Button(label='Create Ticket', style=discord.ButtonStyle.success)
+    view = discord.ui.View()
+    view.add_item(TicketButton(ctx))
+    await ctx.send("Click the button to create a ticket:", view=view)
+
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
@@ -74,6 +93,29 @@ async def ban_error(ctx, error):
         await ctx.send('You do not have permission to ban members.')
     else:
         await ctx.send('An error occurred while banning the member')
+        
+@bot.command(name='create_ticket')
+async def create_ticket(ctx, interaction):
+    channel_name = f"Ticket #{db['ticket']}"
+    guild = ctx.guild
+    existing_channel = discord.utils.get(guild.channels, name=channel_name)
+
+    if not existing_channel:
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            ctx.author: discord.PermissionOverwrite(read_messages=True),
+            guild.me: discord.PermissionOverwrite(read_messages=True)
+        }
+
+        for role in guild.roles:
+            if role.permissions.manage_channels:
+                overwrites[role] = discord.PermissionOverwrite(read_messages=True)
+
+        new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        await interaction.followup.send(f'Private channel "{channel_name}" has been created.', ephemeral=True)
+    else:
+        await ctx.send(f'Channel "{channel_name}" already exists.', ephemeral=True)
+
 @bot.command(name='join', help='Joins the voice channel you are currently in.')
 async def _join(ctx):
     if ctx.author.voice is None:
@@ -211,7 +253,7 @@ async def _unban(ctx, id: int):
         
 @bot.command(name='g_role', help='Adds a role to a member.')
 @commands.has_permissions(manage_roles=True)
-async def _role(ctx, member: discord.Member, role_name: str):
+async def _give_role(ctx, member: discord.Member, role_name: str):
     guild = ctx.guild
     role = get(guild.roles, name=role_name)
 
@@ -310,7 +352,7 @@ async def _aud2(ctx):
         await ctx.send(f"An error occurred: {e}")
         if voice_client.is_connected():
             await voice_client.disconnect()
-
+            
 token = os.getenv('DISCORD_TOKEN')
 if not token:
     raise ValueError("No DISCORD_TOKEN environment variable found")
