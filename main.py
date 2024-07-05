@@ -36,7 +36,7 @@ async def on_ready():
 @bot.event
 async def on_raw_reaction_add(payload):
     channel_id = payload.channel_id
-    if channel_id == 926500132130791462:
+    if channel_id == os.environ['RULE_CHANNEL_ID']:
         guild = bot.get_guild(payload.guild_id)
         if guild is not None:
             member = guild.get_member(payload.user_id)
@@ -77,7 +77,7 @@ async def ban_error(ctx, error):
     else:
         await ctx.send('An error occurred while banning the member')
 
-class TicketButton(discord.ui.Button):
+class create_ticket_button(discord.ui.Button):
     def __init__(self, ctx):
         super().__init__(label='Create Ticket', style=discord.ButtonStyle.success)
         self.ctx = ctx
@@ -87,6 +87,16 @@ class TicketButton(discord.ui.Button):
         db['ticket'] += 1
         await crChannel(self.ctx, interaction)
 
+class CloseTicketButton(discord.ui.Button):
+    def __init__(self, channel):
+        super().__init__(label='Close Ticket', style=discord.ButtonStyle.red)
+        self.channel = channel
+        
+    async def callback(self, interaction):
+        await interaction.response.defer()
+        await self.channel.delete()
+        db['ticket'] -= 1
+        
 @bot.command(name='channel')
 async def crChannel(ctx, interaction):
     channel_name = f"Ticket-{ctx.author.name}-{db['ticket']}"
@@ -103,7 +113,12 @@ async def crChannel(ctx, interaction):
         for role in guild.roles:
             if role.permissions.manage_channels:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+
         new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        close_button = CloseTicketButton(new_channel) 
+        view = discord.ui.View() 
+        view.add_item(close_button)  
+        await new_channel.send(f"Welcome to your ticket! Click the button to close it.", view=view)
 
         await interaction.followup.send(f'Private channel {new_channel.mention} has been created for your ticket.', ephemeral=True)
     else:
@@ -112,7 +127,7 @@ async def crChannel(ctx, interaction):
 @bot.command(name='ticket', help='Creates a button to create a ticket.')
 async def _ticket(ctx):
     view = discord.ui.View()
-    view.add_item(TicketButton(ctx))
+    view.add_item(create_ticket_button(ctx))
     await ctx.send("Click the button to create a ticket:", view=view)
 
 @bot.command(name='join', help='Joins the voice channel you are currently in.')
